@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Interactive</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #070711;
+      --text: #ffffff;
+      --muted: #a7a7bd;
+      --card: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.12);
+      --primary: #7c3cff;
+      --secondary: #00e5ff;
+    }
+
+    body.light {
+      --bg: #f4f5ff;
+      --text: #11111c;
+      --muted: #5f6170;
+      --card: rgba(255, 255, 255, 0.7);
+      --border: rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      transition: 0.4s;
+    }
+
+    /* Animated background */
+    .blob {
+      position: fixed;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.35;
+      z-index: -1;
+      animation: float 10s infinite alternate ease-in-out;
+    }
+
+    .blob.one {
+      background: #7c3cff;
+      top: -100px;
+      left: -100px;
+    }
+
+    .blob.two {
+      background: #00e5ff;
+      right: -100px;
+      bottom: -100px;
+      animation-delay: -4s;
+    }
+
+    @keyframes float {
+      from {
+        transform: translate(0, 0) scale(1);
+      }
+      to {
+        transform: translate(80px, 50px) scale(1.2);
+      }
+    }
+
+    /* Navigation */
+    nav {
+      width: 90%;
+      max-width: 1100px;
+      margin: 25px auto;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      backdrop-filter: blur(15px);
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: bold;
+      background: linear-gradient(90deg, var(--secondary), var(--primary));
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    nav button {
+      border: none;
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 15px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    nav button:hover {
+      transform: scale(1.05);
+      border-color: var(--secondary);
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 75vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .hero span {
+      color: var(--secondary);
+      font-weight: bold;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-size: 13px;
+    }
+
+    h1 {
+      font-size: clamp(50px, 10vw, 100px);
+      line-height: 0.95;
+      margin: 20px 0;
+      max-width: 900px;
+    }
+
+    .gradient {
+      background: linear-gradient(
+        90deg,
+        #ffffff,
+        #8b5cff,
+        #00e5ff
+      );
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .hero p {
+      max-width: 600px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.7;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 15px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 14px 24px;
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 15px;
+      transition: 0.3s;
+    }
+
+    .primary {
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      color: white;
+      box-shadow: 0 0 30px rgba(124, 60, 255, 0.4);
+    }
+
+    .secondary {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 229, 255, 0.2);
+    }
+
+    /* Cards */
+    .section {
+      width: 90%;
+      max-width: 1100px;
+      margin: auto;
+      padding: 50px 0 100px;
+    }
+
+    .section h2 {
+      font-size: 40px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .card {
+      padding: 30px;
+      min-height: 220px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      backdrop-filter: blur(15px);
+      transition: 0.4s;
+      transform-style: preserve-3d;
+    }
+
+    .card:hover {
+      transform: translateY(-10px) rotateX(3deg) rotateY(-3deg);
+      border-color: var(--secondary);
+      box-shadow: 0 20px 50px rgba(0, 229, 255, 0.1);
+    }
+
+    .icon {
+      font-size: 40px;
+      margin-bottom: 20px;
+    }
+
+    .card h3 {
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+
+    .card p {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* Counter */
+    .counter-box {
+      text-align: center;
+      margin-top: 70px;
+      padding: 50px;
+      border: 1px solid var(--border);
+      border-radius: 25px;
+      background: var(--card);
+    }
+
+    #counter {
+      font-size: 70px;
+      font-weight: bold;
+      color: var(--secondary);
+      margin: 15px;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    /* Responsive */
+    @media (max-width: 800px) {
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      nav {
+        width: 94%;
+      }
+
+      .hero {
+        min-height: 70vh;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="blob one"></div>
+  <div class="blob two"></div>
+
+  <nav>
+    <div class="logo">NΞON</div>
+
+    <button onclick="toggleTheme()" id="themeBtn">
+      ☀️ Light
+    </button>
+  </nav>
+
+  <section class="hero">
+
+    <span>Welcome to the future</span>
+
+    <h1>
+      Build something
+      <span class="gradient">awesome.</span>
+    </h1>
+
+    <p>
+      A futuristic interactive website made with nothing but
+      HTML, CSS and JavaScript.
+    </p>
+
+    <div class="buttons">
+      <button class="btn primary" onclick="sayHello()">
+        Explore ✨
+      </button>
+
+      <button class="btn secondary" onclick="scrollToFeatures()">
+        See Features ↓
+      </button>
+    </div>
+
+  </section>
+
+  <section class="section" id="features">
+
+    <h2>What's inside?</h2>
+
+    <div class="cards">
+
+      <div class="card">
+        <div class="icon">⚡</div>
+        <h3>Fast</h3>
+        <p>
+          No frameworks or complicated setup. Just open the
+          HTML file and you're ready to go.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="icon">🎨</div>
+        <h3>Beautiful</h3>
+        <p>
+          Glassmorphism, gradients, glowing effects and
+          smooth animations give the site a modern feel.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="icon">🧠</div>
+        <h3>Interactive</h3>
+        <p>
+          JavaScript adds theme switching, animations,
+          buttons and dynamic content.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="counter-box">
+
+      <h2>Click the button</h2>
+
+      <div id="counter">0</div>
+
+      <button class="btn primary" onclick="increaseCounter()">
+        Click me 🚀
+      </button>
+
+    </div>
+
+  </section>
+
+  <footer>
+    Made with ❤️ using HTML, CSS & JavaScript
+  </footer>
+
+
+  <script>
+
+    // Counter
+    let count = 0;
+
+    function increaseCounter() {
+      count++;
+
+      document.getElementById("counter").textContent = count;
+
+      // Little animation
+      const counter = document.getElementById("counter");
+
+      counter.style.transform = "scale(1.3)";
+
+      setTimeout(() => {
+        counter.style.transform = "scale(1)";
+      }, 150);
+    }
+
+
+    // Theme switcher
+    function toggleTheme() {
+
+      document.body.classList.toggle("light");
+
+      const button = document.getElementById("themeBtn");
+
+      if (document.body.classList.contains("light")) {
+        button.textContent = "🌙 Dark";
+      } else {
+        button.textContent = "☀️ Light";
+      }
+    }
+
+
+    // Explore button
+    function sayHello() {
+
+      alert(
+        "🚀 Welcome to NΞON!\n\nYou just triggered an interactive JavaScript action."
+      );
+
+    }
+
+
+    // Scroll button
+    function scrollToFeatures() {
+
+      document
+        .getElementById("features")
+        .scrollIntoView({
+          behavior: "smooth"
+        });
+
+    }
+
+
+    // Add a subtle mouse-follow effect to cards
+    const cards = document.querySelectorAll(".card");
+
+    cards.forEach(card => {
+
+      card.addEventListener("mousemove", e => {
+
+        const rect = card.getBoundingClientRect();
+
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const rotateX =
+          ((y - rect.height / 2) / rect.height) * -8;
+
+        const rotateY =
+          ((x - rect.width / 2) / rect.width) * 8;
+
+        card.style.transform =
+          `perspective(600px)
+           rotateX(${rotateX}deg)
+           rotateY(${rotateY}deg)
+           translateY(-8px)`;
+
+      });
+
+      card.addEventListener("mouseleave", () => {
+
+        card.style.transform =
+          "perspective(600px) rotateX(0) rotateY(0) translateY(0)";
+
+      });
+
+    });
+
+  </script>
+
+</body>
+</html>
