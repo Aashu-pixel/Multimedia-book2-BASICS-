@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Hand Gesture Playground</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #050510;
+            color: white;
+        }
+
+        /* Main playground */
+        #playground {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+
+            background:
+                radial-gradient(circle at 50% 50%,
+                rgba(80, 0, 255, 0.15),
+                transparent 40%),
+                #050510;
+        }
+
+        /* Webcam */
+        #video {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+
+            width: 220px;
+            height: 165px;
+
+            object-fit: cover;
+
+            border-radius: 18px;
+            border: 2px solid rgba(255,255,255,.3);
+
+            transform: scaleX(-1);
+
+            opacity: .8;
+            z-index: 100;
+        }
+
+        /* Canvas where objects are drawn */
+        #canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Hand cursor */
+        #cursor {
+            position: absolute;
+
+            width: 30px;
+            height: 30px;
+
+            border-radius: 50%;
+
+            background: #00ffff;
+
+            box-shadow:
+                0 0 10px #00ffff,
+                0 0 30px #00ffff,
+                0 0 60px #00ffff;
+
+            pointer-events: none;
+
+            transform: translate(-50%, -50%);
+
+            z-index: 50;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 25px;
+            left: 30px;
+
+            z-index: 200;
+        }
+
+        .header h1 {
+            margin: 0;
+
+            font-size: 30px;
+
+            background: linear-gradient(
+                90deg,
+                #00ffff,
+                #8b5cff,
+                #ff00cc
+            );
+
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .header p {
+            margin-top: 6px;
+            color: #aaa;
+        }
+
+        /* Instructions */
+        .instructions {
+            position: fixed;
+
+            left: 30px;
+            bottom: 30px;
+
+            z-index: 200;
+
+            padding: 18px 22px;
+
+            border-radius: 16px;
+
+            background: rgba(20,20,35,.65);
+            backdrop-filter: blur(15px);
+
+            border: 1px solid rgba(255,255,255,.1);
+
+            line-height: 1.8;
+        }
+
+        .instructions span {
+            color: #00ffff;
+        }
+
+        /* Status */
+        #status {
+            position: fixed;
+
+            top: 30px;
+            right: 30px;
+
+            z-index: 200;
+
+            padding: 10px 18px;
+
+            border-radius: 30px;
+
+            background: rgba(0,0,0,.5);
+
+            color: #00ffff;
+        }
+
+        /* Objects */
+        .shape {
+            position: absolute;
+
+            pointer-events: none;
+
+            animation: appear .25s ease-out;
+        }
+
+        .circle {
+            width: 70px;
+            height: 70px;
+
+            border-radius: 50%;
+        }
+
+        .square {
+            width: 70px;
+            height: 70px;
+
+            border-radius: 12px;
+        }
+
+        .triangle {
+            width: 0;
+            height: 0;
+
+            border-left: 40px solid transparent;
+            border-right: 40px solid transparent;
+            border-bottom: 70px solid;
+        }
+
+        .star {
+            font-size: 70px;
+            line-height: 70px;
+        }
+
+        @keyframes appear {
+            from {
+                transform: scale(0) rotate(-30deg);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) rotate(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="playground">
+
+    <div class="header">
+        <h1>✋ Hand Playground</h1>
+        <p>Create things with your hands</p>
+    </div>
+
+    <div id="status">
+        Camera starting...
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div id="cursor"></div>
+
+    <div class="instructions">
+        ☝️ <span>Move index finger</span> — Move cursor<br>
+        🤏 <span>Pinch</span> — Create object<br>
+        👍 <span>Thumbs up</span> — Change object<br>
+        ✋ <span>Open palm</span> — Change color<br>
+        ✊ <span>Fist</span> — Clear screen
+    </div>
+
+    <video id="video" autoplay playsinline></video>
+
+</div>
+
+
+<!-- MediaPipe Hands -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+
+<script>
+
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const cursor = document.getElementById("cursor");
+const playground = document.getElementById("playground");
+const status = document.getElementById("status");
+
+
+// --------------------------------------------------
+// Canvas size
+// --------------------------------------------------
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+
+resizeCanvas();
+
+window.addEventListener("resize", resizeCanvas);
+
+
+// --------------------------------------------------
+// Settings
+// --------------------------------------------------
+
+const colors = [
+    "#00ffff",
+    "#ff00cc",
+    "#8b5cff",
+    "#00ff66",
+    "#ffff00",
+    "#ff5500"
+];
+
+const shapes = [
+    "circle",
+    "square",
+    "triangle",
+    "star"
+];
+
+let colorIndex = 0;
+let shapeIndex = 0;
+
+let lastPinch = false;
+let lastThumb = false;
+let lastPalm = false;
+let lastFist = false;
+
+let handDetected = false;
+
+
+// --------------------------------------------------
+// Utility functions
+// --------------------------------------------------
+
+function distance(a, b) {
+
+    return Math.sqrt(
+        Math.pow(a.x - b.x, 2) +
+        Math.pow(a.y - b.y, 2)
+    );
+
+}
+
+
+// --------------------------------------------------
+// Create object
+// --------------------------------------------------
+
+function createObject(x, y) {
+
+    const object = document.createElement("div");
+
+    const shape = shapes[shapeIndex];
+    const color = colors[colorIndex];
+
+    object.classList.add("shape");
+
+    object.style.left = x + "px";
+    object.style.top = y + "px";
+
+    object.style.transform =
+        "translate(-50%, -50%)";
+
+    if (shape === "circle") {
+
+        object.classList.add("circle");
+
+        object.style.background = color;
+
+        object.style.boxShadow =
+            `0 0 20px ${color},
+             0 0 50px ${color}`;
+
+    }
+
+    else if (shape === "square") {
+
+        object.classList.add("square");
+
+        object.style.background = color;
+
+        object.style.boxShadow =
+            `0 0 20px ${color},
+             0 0 50px ${color}`;
+
+    }
+
+    else if (shape === "triangle") {
+
+        object.classList.add("triangle");
+
+        object.style.borderBottomColor = color;
+
+        object.style.filter =
+            `drop-shadow(0 0 20px ${color})`;
+
+    }
+
+    else if (shape === "star") {
+
+        object.classList.add("star");
+
+        object.innerHTML = "★";
+
+        object.style.color = color;
+
+        object.style.textShadow =
+            `0 0 20px ${color},
+             0 0 50px ${color}`;
+
+    }
+
+    playground.appendChild(object);
+
+
+    // Automatically remove after 8 seconds
+
+    setTimeout(() => {
+
+        object.style.transition =
+            "all 1s ease";
+
+        object.style.opacity = "0";
+        object.style.transform =
+            "translate(-50%, -50%) scale(2) rotate(180deg)";
+
+        setTimeout(() => {
+            object.remove();
+        }, 1000);
+
+    }, 8000);
+
+}
+
+
+// --------------------------------------------------
+// Clear objects
+// --------------------------------------------------
+
+function clearObjects() {
+
+    document
+        .querySelectorAll(".shape")
+        .forEach(obj => obj.remove());
+
+}
+
+
+// --------------------------------------------------
+// MediaPipe
+// --------------------------------------------------
+
+const hands = new Hands({
+
+    locateFile: (file) => {
+
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+
+    }
+
+});
+
+
+hands.setOptions({
+
+    maxNumHands: 1,
+
+    modelComplexity: 1,
+
+    minDetectionConfidence: 0.6,
+
+    minTrackingConfidence: 0.6
+
+});
+
+
+// --------------------------------------------------
+// Hand detection
+// --------------------------------------------------
+
+hands.onResults(results => {
+
+    if (
+        !results.multiHandLandmarks ||
+        results.multiHandLandmarks.length === 0
+    ) {
+
+        handDetected = false;
+
+        status.innerText = "✋ Show your hand";
+
+        status.style.color = "#ff5555";
+
+        return;
+    }
+
+
+    handDetected = true;
+
+    status.innerText = "● Hand detected";
+
+    status.style.color = "#00ff88";
+
+
+    const landmarks =
+        results.multiHandLandmarks[0];
+
+
+    // ----------------------------------------------
+    // Important landmarks
+    // ----------------------------------------------
+
+    const wrist = landmarks[0];
+
+    const thumbTip = landmarks[4];
+    const indexTip = landmarks[8];
+    const middleTip = landmarks[12];
+    const ringTip = landmarks[16];
+    const pinkyTip = landmarks[20];
+
+
+    // ----------------------------------------------
+    // Convert webcam coordinates to screen
+    // ----------------------------------------------
+
+    // Webcam is mirrored using scaleX(-1),
+    // therefore X is inverted.
+
+    const x =
+        (1 - indexTip.x) *
+        window.innerWidth;
+
+    const y =
+        indexTip.y *
+        window.innerHeight;
+
+
+    // ----------------------------------------------
+    // Move virtual cursor
+    // ----------------------------------------------
+
+    cursor.style.left = x + "px";
+    cursor.style.top = y + "px";
+
+
+    // ----------------------------------------------
+    // PINCH detection
+    // ----------------------------------------------
+
+    const pinchDistance =
+        distance(thumbTip, indexTip);
+
+    const pinch =
+        pinchDistance < 0.055;
+
+
+    if (pinch && !lastPinch) {
+
+        createObject(x, y);
+
+    }
+
+    lastPinch = pinch;
+
+
+    // ----------------------------------------------
+    // OPEN PALM detection
+    // ----------------------------------------------
+
+    const palmOpen =
+        distance(indexTip, wrist) > 0.30 &&
+        distance(middleTip, wrist) > 0.30 &&
+        distance(ringTip, wrist) > 0.27 &&
+        distance(pinkyTip, wrist) > 0.25;
+
+
+    if (palmOpen && !lastPalm) {
+
+        colorIndex++;
+
+        if (colorIndex >= colors.length) {
+            colorIndex = 0;
+        }
+
+        cursor.style.background =
+            colors[colorIndex];
+
+        cursor.style.boxShadow =
+            `0 0 10px ${colors[colorIndex]},
+             0 0 30px ${colors[colorIndex]},
+             0 0 60px ${colors[colorIndex]}`;
+
+    }
+
+    lastPalm = palmOpen;
+
+
+    // ----------------------------------------------
+    // FIST detection
+    // ----------------------------------------------
+
+    const fingersClosed =
+        distance(indexTip, wrist) < 0.23 &&
+        distance(middleTip, wrist) < 0.23 &&
+        distance(ringTip, wrist) < 0.23 &&
+        distance(pinkyTip, wrist) < 0.23;
+
+
+    if (fingersClosed && !lastFist) {
+
+        clearObjects();
+
+    }
+
+    lastFist = fingersClosed;
+
+
+    // ----------------------------------------------
+    // THUMBS UP detection
+    // ----------------------------------------------
+
+    const thumbUp =
+        thumbTip.y < landmarks[3].y &&
+        thumbTip.y < indexTip.y &&
+        distance(indexTip, wrist) < 0.30 &&
+        distance(middleTip, wrist) < 0.30;
+
+
+    if (thumbUp && !lastThumb) {
+
+        shapeIndex++;
+
+        if (shapeIndex >= shapes.length) {
+            shapeIndex = 0;
+        }
+
+        status.innerText =
+            "Shape: " +
+            shapes[shapeIndex];
+
+    }
+
+    lastThumb = thumbUp;
+
+});
+
+
+// --------------------------------------------------
+// Start camera
+// --------------------------------------------------
+
+const camera = new Camera(video, {
+
+    onFrame: async () => {
+
+        await hands.send({
+            image: video
+        });
+
+    },
+
+    width: 1280,
+    height: 720
+
+});
+
+camera.start();
+
+</script>
+
+</body>
+</html>
